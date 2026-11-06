@@ -1,48 +1,113 @@
 import AppKit
+import Combine
 import SwiftUI
 
-@main
-struct touchbarcontrolApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+private let appDelegate = AppDelegate()
 
-    var body: some Scene {
-        MenuBarExtra {
-            MenuView(controller: appDelegate.touchBar, shortcuts: appDelegate.shortcuts) {
-                NSApplication.shared.terminate(nil)
-            }
-        } label: {
-            StatusIcon(controller: appDelegate.touchBar)
-        }
-        .menuBarExtraStyle(.window)
+@main
+enum AppMain {
+    static func main() {
+        let app = NSApplication.shared
+        app.delegate = appDelegate
+        app.run()
     }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let touchBar = TouchBarController()
     let shortcuts = ShortcutCenter()
+    private var statusItem: NSStatusItem?
+    private var popover: NSPopover?
+    private var iconObserver: AnyCancellable?
 
     override init() {
         super.init()
         shortcuts.onToggle = { [weak self] in
             self?.touchBar.toggle()
+            self?.keepStatusItemVisible()
         }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        installStatusItem()
+        iconObserver = touchBar.$isOn.receive(on: DispatchQueue.main).sink { [weak self] _ in
+            self?.updateIcon()
+            self?.keepStatusItemVisible()
+        }
         touchBar.reapplyIfNeeded()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         touchBar.restoreForQuit()
     }
-}
 
-private struct StatusIcon: View {
-    @ObservedObject var controller: TouchBarController
+    private func installStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = item
+        item.isVisible = true
+        if let button = item.button {
+            button.target = self
+            button.action = #selector(toggleMenu(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
+        updateIcon()
 
-    var body: some View {
-        Image(systemName: controller.isOn ? "keyboard" : "keyboard.slash")
-            .accessibilityLabel(controller.isOn ? "Touch Bar on" : "Touch Bar off")
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(
+            rootView: MenuView(controller: touchBar, shortcuts: shortcuts) {
+                NSApplication.shared.terminate(nil)
+            }
+        )
+        if #available(macOS 13.0, *) {
+            (popover.contentViewController as? NSHostingController<MenuView>)?.sizingOptions = .preferredContentSize
+        }
+        self.popover = popover
+    }
+
+    /// Covering the Touch Bar can drop a SwiftUI menu-bar extra. Recreate this item if that happens.
+    private func keepStatusItemVisible() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if self.statusItem == nil || self.statusItem?.button == nil {
+                self.installStatusItem()
+            }
+            self.statusItem?.isVisible = true
+            self.updateIcon()
+        }
+        for delay in [0.3, 1.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self else { return }
+                if self.statusItem?.button == nil {
+                    self.installStatusItem()
+                }
+                self.statusItem?.isVisible = true
+                self.updateIcon()
+            }
+        }
+    }
+
+    private func updateIcon() {
+        let on = touchBar.isOn
+        let symbol = on ? "keyboard" : "keyboard.slash"
+        let description = on ? "Touch Bar on" : "Touch Bar off"
+        guard let button = statusItem?.button else { return }
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: description)
+            ?? NSImage(systemSymbolName: "keyboard", accessibilityDescription: description)
+        image?.isTemplate = true
+        button.image = image
+        button.imagePosition = .imageOnly
+        button.toolTip = "TouchbarControl"
+    }
+
+    @objc private func toggleMenu(_ sender: Any?) {
+        guard let button = statusItem?.button, let popover else { return }
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 }
 
