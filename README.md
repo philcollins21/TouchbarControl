@@ -10,7 +10,6 @@ The app lives in the menu bar, not the Dock. Click the keyboard icon to open it.
 - **Off** covers the Touch Bar, including the Escape key, with a black layer. The keys do not respond.
 - While it is off, hold **Fn** to show the function keys. Releasing Fn covers the bar again.
 - **Double-tap Shift** toggles the Touch Bar from any app.
-- When the screensaver starts or the display sleeps, the Touch Bar turns off. It turns back on after you leave the screensaver or wake the Mac, if it was on before. A Touch Bar you turned off yourself stays off.
 - Quitting the app restores the normal Touch Bar. The on/off choice is remembered the next time you open it.
 
 The black cover only stays in place while TouchbarControl is running.

@@ -38,7 +38,6 @@ final class TouchBarController: NSObject, ObservableObject, NSTouchBarDelegate {
     private let presentationKey = "PresentationModeGlobal"
     private let touchBarDefaults = UserDefaults(suiteName: "com.apple.touchbar.agent")
 
-    private var suspendedByIdle = false
     private var modalTouchBar: NSTouchBar?
     private var savedPresentationMode: String?
     private var pendingCover: DispatchWorkItem?
@@ -65,22 +64,7 @@ final class TouchBarController: NSObject, ObservableObject, NSTouchBarDelegate {
     }
 
     func setOn(_ on: Bool) {
-        suspendedByIdle = false
         apply(on, save: true)
-    }
-
-    /// Turns the Touch Bar off for the screensaver or sleep without changing the saved choice.
-    func suspendForIdle() {
-        guard isOn else { return }
-        suspendedByIdle = true
-        apply(false, save: false)
-    }
-
-    /// Turns the Touch Bar back on after the screensaver exits or the Mac wakes, when idle mode closed it.
-    func resumeAfterIdle() {
-        guard suspendedByIdle else { return }
-        suspendedByIdle = false
-        apply(true, save: false)
     }
 
     private func apply(_ on: Bool, save: Bool) {

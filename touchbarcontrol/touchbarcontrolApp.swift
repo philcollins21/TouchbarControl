@@ -30,46 +30,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         touchBar.reapplyIfNeeded()
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(turnTouchBarOff),
-            name: Notification.Name("com.apple.screensaver.didstart"),
-            object: nil,
-            suspensionBehavior: .deliverImmediately
-        )
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(turnTouchBarOff),
-            name: NSWorkspace.screensDidSleepNotification,
-            object: nil
-        )
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(turnTouchBarOn),
-            name: Notification.Name("com.apple.screensaver.didstop"),
-            object: nil,
-            suspensionBehavior: .deliverImmediately
-        )
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(turnTouchBarOn),
-            name: NSWorkspace.didWakeNotification,
-            object: nil
-        )
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(turnTouchBarOn),
-            name: NSWorkspace.screensDidWakeNotification,
-            object: nil
-        )
-    }
-
-    @objc private func turnTouchBarOff() {
-        touchBar.suspendForIdle()
-    }
-
-    @objc private func turnTouchBarOn() {
-        touchBar.resumeAfterIdle()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -104,7 +64,7 @@ private struct MenuView: View {
                 .toggleStyle(.switch)
 
                 Text(controller.isOn
-                    ? "The Touch Bar is on. It turns off for the screensaver and sleep, then turns back on."
+                    ? "The Touch Bar is on."
                     : "The Touch Bar is off. Hold Fn to show the function keys.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
